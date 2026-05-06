@@ -2,7 +2,7 @@
     "users": {
         "03080018225": {
             "Name": "Azhar Ali",
-            "balance": 9500,
+            "balance": 9000,
             "pin": "1234",
             "name": "Azhar Ali",
             "phone": "03080018225"
@@ -320,6 +320,19 @@
             "amount": 500,
             "fee": 0.0,
             "date": "04-May-2026 11:33 PM"
+        },
+        {
+            "id": "1782659180",
+            "sender": "03080018225",
+            "receiver": "Ishfaq Ahmad ",
+            "receiver_name": "Ishfaq Ahmad ",
+            "receiver_phone": "",
+            "account_name": "Ishfaq Ahmad ",
+            "sender_name": "Azhar Ali",
+            "sender_phone": "03080018225",
+            "amount": 500,
+            "fee": 0.0,
+            "date": "05-May-2026 12:04 AM"
         }
     ]
 }

@@ -62,36 +62,62 @@ def load_font(size, weight="regular"):
     if weight in ("bold", "b"):
         candidates = [
             "C:/Windows/Fonts/segoeuib.ttf",
-            "C:/Windows/Fonts/segoeuib.ttf",
             "C:/Windows/Fonts/arialbd.ttf",
             "C:/Windows/Fonts/calibrib.ttf",
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+            "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+            "/usr/share/fonts/truetype/freefont/FreeSansBold.ttf",
+            "DejaVuSans-Bold.ttf",
+            "Arial Bold.ttf",
         ]
     elif weight in ("semibold", "semi", "sb", "600"):
         candidates = [
             "C:/Windows/Fonts/segoeuisb.ttf",
             "C:/Windows/Fonts/segoeui.ttf",
             "C:/Windows/Fonts/calibri.ttf",
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+            "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+            "/usr/share/fonts/truetype/freefont/FreeSans.ttf",
+            "DejaVuSans.ttf",
+            "Arial.ttf",
         ]
     else:
         candidates = [
             "C:/Windows/Fonts/segoeui.ttf",
             "C:/Windows/Fonts/calibri.ttf",
             "C:/Windows/Fonts/arial.ttf",
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+            "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+            "/usr/share/fonts/truetype/freefont/FreeSans.ttf",
+            "DejaVuSans.ttf",
+            "Arial.ttf",
         ]
 
+    # macOS common locations
     candidates.extend(
         [
-            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf" if weight in ("bold", "b") else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
             "/Library/Fonts/Arial Bold.ttf" if weight in ("bold", "b") else "/Library/Fonts/Arial.ttf",
+            "/System/Library/Fonts/Supplemental/Arial Bold.ttf" if weight in ("bold", "b") else "/System/Library/Fonts/Supplemental/Arial.ttf",
         ]
     )
 
-    for font_path in candidates:
-        if Path(font_path).exists():
-            try:
-                return ImageFont.truetype(font_path, size)
-            except Exception:
-                continue
+    # Try loading each candidate directly first. This works for font family names
+    # and for paths that exist in cloud runtimes where absolute locations differ.
+    for font_ref in candidates:
+        try:
+            return ImageFont.truetype(font_ref, size)
+        except Exception:
+            continue
+
+    # Last attempt: only for local relative files inside project.
+    base_dir = Path(__file__).parent
+    for font_ref in candidates:
+        try:
+            local_path = base_dir / font_ref
+            if local_path.exists():
+                return ImageFont.truetype(str(local_path), size)
+        except Exception:
+            continue
     return ImageFont.load_default()
 
 
