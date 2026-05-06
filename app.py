@@ -7,6 +7,7 @@ from PIL import Image, ImageDraw, ImageFont
 from pathlib import Path
 
 FILE = "data.json"
+APP_BUILD = "receipt-font-fix-2026-05-06-1552"
 REFERENCE_TEMPLATE_PATHS = [
     "assets/receipt_template.png",
     "receipt_template.png",
@@ -440,6 +441,7 @@ if "pending_user_key" not in st.session_state:
 
 # ------------------ UI ------------------
 st.set_page_config(page_title="Easypaisa", layout="wide")
+st.caption(f"Build: {APP_BUILD}")
 
 st.markdown("""
 <style>
@@ -581,12 +583,15 @@ else:
             )
 
             if st.checkbox("Show render diagnostics", value=False):
+                using_default_font = "PIL_DEFAULT_FONT" in FONT_SOURCES_USED
                 template_path = find_reference_template()
                 st.caption(
                     f"Renderer: {LAST_RECEIPT_RENDER_MODE} | "
                     f"Template: {str(template_path) if template_path else 'not found'} | "
                     f"Fonts: {', '.join(sorted(FONT_SOURCES_USED)) if FONT_SOURCES_USED else 'none'}"
                 )
+                if using_default_font:
+                    st.error("Diagnostic: app is still using PIL default font (tiny-text fallback).")
 
     # ---------------- HISTORY ----------------
     st.subheader("Transaction History")
