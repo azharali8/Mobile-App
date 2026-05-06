@@ -2,7 +2,6 @@ import streamlit as st
 import json, random
 from datetime import datetime
 from io import BytesIO
-import PIL
 from PIL import Image, ImageDraw, ImageFont
 from pathlib import Path
 
@@ -19,19 +18,9 @@ LOGO_PATHS = [
     "assets/easypaisa_logo.png",
     "easypaisa_logo.png",
 ]
-BUNDLED_FONT_PATHS = {
-    "regular": [
-        "assets/fonts/AppSans-Regular.ttf",
-    ],
-    "semibold": [
-        "assets/fonts/AppSans-Bold.ttf",
-    ],
-    "bold": [
-        "assets/fonts/AppSans-Bold.ttf",
-    ],
-}
 FONT_SOURCES_USED = set()
 LAST_RECEIPT_RENDER_MODE = "unknown"
+BITMAP_FONT = ImageFont.load_default()
 
 # ------------------ DATA ------------------
 def load_data():
@@ -68,93 +57,13 @@ def save_data(data):
 
 # ------------------ HELPERS ------------------
 def load_font(size, weight="regular"):
-    """
-    Load system fonts with graceful fallback.
-    Tries to match the original Easypaisa receipt look on Windows (Segoe UI).
-    """
-    weight = (weight or "regular").lower()
-    candidates = []
-    base_dir = Path(__file__).parent
-
-    # First priority: bundled repo fonts for consistent rendering everywhere.
-    for font_rel in BUNDLED_FONT_PATHS.get(weight, []) + BUNDLED_FONT_PATHS.get("regular", []):
-        local_font = base_dir / font_rel
-        if local_font.exists():
-            candidates.append(str(local_font))
-    if weight in ("bold", "b"):
-        candidates = [
-            "C:/Windows/Fonts/segoeuib.ttf",
-            "C:/Windows/Fonts/arialbd.ttf",
-            "C:/Windows/Fonts/calibrib.ttf",
-            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-            "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
-            "/usr/share/fonts/truetype/freefont/FreeSansBold.ttf",
-            "DejaVuSans-Bold.ttf",
-            "Arial Bold.ttf",
-        ]
-    elif weight in ("semibold", "semi", "sb", "600"):
-        candidates = [
-            "C:/Windows/Fonts/segoeuisb.ttf",
-            "C:/Windows/Fonts/segoeui.ttf",
-            "C:/Windows/Fonts/calibri.ttf",
-            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-            "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
-            "/usr/share/fonts/truetype/freefont/FreeSans.ttf",
-            "DejaVuSans.ttf",
-            "Arial.ttf",
-        ]
-    else:
-        candidates = [
-            "C:/Windows/Fonts/segoeui.ttf",
-            "C:/Windows/Fonts/calibri.ttf",
-            "C:/Windows/Fonts/arial.ttf",
-            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-            "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
-            "/usr/share/fonts/truetype/freefont/FreeSans.ttf",
-            "DejaVuSans.ttf",
-            "Arial.ttf",
-        ]
-
-    # macOS common locations
-    candidates.extend(
-        [
-            "/Library/Fonts/Arial Bold.ttf" if weight in ("bold", "b") else "/Library/Fonts/Arial.ttf",
-            "/System/Library/Fonts/Supplemental/Arial Bold.ttf" if weight in ("bold", "b") else "/System/Library/Fonts/Supplemental/Arial.ttf",
-        ]
-    )
-
-    # Pillow bundles DejaVu fonts in many runtimes (including Streamlit cloud),
-    # so probe package-local paths before system paths.
-    pil_fonts_dir = Path(PIL.__file__).resolve().parent / "fonts"
-    if weight in ("bold", "b"):
-        candidates = [str(pil_fonts_dir / "DejaVuSans-Bold.ttf")] + candidates
-    elif weight in ("semibold", "semi", "sb", "600"):
-        candidates = [str(pil_fonts_dir / "DejaVuSans.ttf")] + candidates
-    else:
-        candidates = [str(pil_fonts_dir / "DejaVuSans.ttf")] + candidates
-
-    # Try loading each candidate directly first. This works for font family names
-    # and for paths that exist in cloud runtimes where absolute locations differ.
-    for font_ref in candidates:
-        try:
-            font = ImageFont.truetype(font_ref, size)
-            FONT_SOURCES_USED.add(str(font_ref))
-            return font
-        except Exception:
-            continue
-
-    # Last attempt: only for local relative files inside project.
-    for font_ref in candidates:
-        try:
-            local_path = base_dir / font_ref
-            if local_path.exists():
-                font = ImageFont.truetype(str(local_path), size)
-                FONT_SOURCES_USED.add(str(local_path))
-                return font
-        except Exception:
-            continue
-    FONT_SOURCES_USED.add("PIL_DEFAULT_FONT")
-    return ImageFont.load_default()
+    # TTF path removed intentionally: always use deterministic Pillow default.
+    try:
+        FONT_SOURCES_USED.add(f"PIL_DEFAULT_FONT_SIZE_{size}")
+        return ImageFont.load_default(size=size)
+    except TypeError:
+        FONT_SOURCES_USED.add("PIL_DEFAULT_FONT_LEGACY")
+        return ImageFont.load_default()
 
 
 def draw_centered_text(draw, text, y, font, fill, width):
@@ -184,6 +93,51 @@ def fit_text(draw, text, font, max_width):
     while truncated and (draw.textbbox((0, 0), f"{truncated}...", font=font)[2] > max_width):
         truncated = truncated[:-1]
     return f"{truncated}..."
+
+
+def _bitmap_scaled_size(text, target_height):
+    value = str(text or "")
+    bbox = BITMAP_FONT.getbbox(value if value else " ")
+    base_w = max(1, bbox[2] - bbox[0])
+    base_h = max(1, bbox[3] - bbox[1])
+    scale = max(1.0, float(target_height) / float(base_h))
+    return int(base_w * scale), int(base_h * scale), scale
+
+
+def draw_bitmap_scaled_text(img, text, x, y, target_height, fill):
+    value = str(text or "")
+    if not value:
+        return 0, 0
+    base_bbox = BITMAP_FONT.getbbox(value)
+    base_w = max(1, base_bbox[2] - base_bbox[0])
+    base_h = max(1, base_bbox[3] - base_bbox[1])
+    _, _, scale = _bitmap_scaled_size(value, target_height)
+
+    text_layer = Image.new("RGBA", (base_w + 4, base_h + 4), (0, 0, 0, 0))
+    layer_draw = ImageDraw.Draw(text_layer)
+    layer_draw.text((2, 2), value, font=BITMAP_FONT, fill=fill)
+    out_w = max(1, int((base_w + 4) * scale))
+    out_h = max(1, int((base_h + 4) * scale))
+    scaled = text_layer.resize((out_w, out_h), Image.Resampling.NEAREST)
+    img.paste(scaled, (int(x), int(y)), scaled)
+    return out_w, out_h
+
+
+def fit_bitmap_scaled_text(text, target_height, max_width):
+    value = str(text or "")
+    if not value:
+        return value
+    w, _, _ = _bitmap_scaled_size(value, target_height)
+    if w <= max_width:
+        return value
+    truncated = value
+    while truncated:
+        candidate = f"{truncated}..."
+        cw, _, _ = _bitmap_scaled_size(candidate, target_height)
+        if cw <= max_width:
+            return candidate
+        truncated = truncated[:-1]
+    return "..."
 
 
 def find_logo_asset():
@@ -417,14 +371,74 @@ def generate_receipt_from_template(txn):
     return img
 
 
+def generate_receipt_zero_risk(txn):
+    template_path = find_reference_template()
+    if not template_path:
+        return generate_receipt_fallback(txn)
+
+    src = Image.open(template_path).convert("RGB")
+    scale = 3
+    base_w, base_h = src.size
+    img = src.resize((base_w * scale, base_h * scale), Image.Resampling.LANCZOS)
+
+    def sx(x):
+        return int(x * scale)
+
+    def sy(y):
+        return int(y * scale)
+
+    body_bg = "#f1f1f1"
+    label_color = "#4e4e4e"
+    value_color = "#646464"
+    total_green = "#23a867"
+    total_color = "#4a4a4a"
+
+    draw = ImageDraw.Draw(img)
+    draw.rectangle([(sx(34), sy(302)), (sx(416), sy(905))], fill=body_bg)
+
+    left = sx(44)
+    draw_bitmap_scaled_text(img, format_reference_datetime(txn.get("date", "")), left, sy(309), sy(16), value_color)
+    draw_bitmap_scaled_text(img, f"ID#{txn.get('id', '')}", left, sy(343), sy(16), value_color)
+
+    max_text_w = sx(280)
+    receiver_name = fit_bitmap_scaled_text(txn.get("receiver_name", txn.get("receiver", "")), sy(16), max_text_w)
+    receiver_phone = fit_bitmap_scaled_text(txn.get("receiver_phone", ""), sy(16), max_text_w)
+    account_name = fit_bitmap_scaled_text(txn.get("account_name", receiver_name), sy(16), max_text_w)
+    sender_name = fit_bitmap_scaled_text(txn.get("sender_name", txn.get("sender", "")), sy(16), max_text_w)
+    sender_phone = fit_bitmap_scaled_text(txn.get("sender_phone", ""), sy(16), max_text_w)
+    amount = float(txn.get("amount", 0))
+    fee = float(txn.get("fee", 0))
+
+    draw_bitmap_scaled_text(img, "Funding Source", left, sy(392), sy(21), label_color)
+    draw_bitmap_scaled_text(img, "easypaisa Account", sx(73), sy(426), sy(16), value_color)
+    draw_bitmap_scaled_text(img, "Sent to", left, sy(478), sy(21), label_color)
+    draw_bitmap_scaled_text(img, receiver_name, left, sy(513), sy(16), value_color)
+    draw_bitmap_scaled_text(img, receiver_phone, left, sy(548), sy(16), value_color)
+    draw_bitmap_scaled_text(img, "Account Details", left, sy(602), sy(21), label_color)
+    draw_bitmap_scaled_text(img, account_name, left, sy(636), sy(16), value_color)
+    draw_bitmap_scaled_text(img, "Sent by", left, sy(690), sy(21), label_color)
+    draw_bitmap_scaled_text(img, sender_name, left, sy(724), sy(16), value_color)
+    draw_bitmap_scaled_text(img, sender_phone, left, sy(758), sy(16), value_color)
+    draw_bitmap_scaled_text(img, "Amount", left, sy(812), sy(21), label_color)
+    draw_bitmap_scaled_text(img, f"{amount:.2f}", left, sy(846), sy(16), value_color)
+    draw_bitmap_scaled_text(img, "Fee / Charge", left, sy(878), sy(21), label_color)
+    draw_bitmap_scaled_text(img, f"{fee:.2f}", left, sy(912), sy(16), value_color)
+    draw_bitmap_scaled_text(img, "Total Amount", left, sy(950), sy(21), total_green)
+
+    rs_w, _ = draw_bitmap_scaled_text(img, "Rs.", left, sy(986), sy(15), total_color)
+    draw_bitmap_scaled_text(img, f"{amount:.2f}", left + rs_w + sx(6), sy(985), sy(18), total_color)
+    FONT_SOURCES_USED.add("PIL_BITMAP_SCALED_ENGINE")
+    return img
+
+
 def generate_receipt(txn):
     global LAST_RECEIPT_RENDER_MODE
-    # Prefer exact template look when an asset is available; otherwise render
-    # with the fallback vector layout.
-    template_render = generate_receipt_from_template(txn)
-    if template_render is not None:
-        LAST_RECEIPT_RENDER_MODE = "template"
-        return template_render
+    # Zero-risk mode: use bitmap-scaled text engine so output stays structured
+    # even if runtime cannot load any TrueType fonts.
+    img = generate_receipt_zero_risk(txn)
+    if img is not None:
+        LAST_RECEIPT_RENDER_MODE = "zero-risk-bitmap"
+        return img
     LAST_RECEIPT_RENDER_MODE = "fallback"
     return generate_receipt_fallback(txn)
 
