@@ -2,6 +2,7 @@ import streamlit as st
 import json, random
 from datetime import datetime
 from io import BytesIO
+import PIL
 from PIL import Image, ImageDraw, ImageFont
 from pathlib import Path
 
@@ -17,6 +18,19 @@ LOGO_PATHS = [
     "assets/easypaisa_logo.png",
     "easypaisa_logo.png",
 ]
+BUNDLED_FONT_PATHS = {
+    "regular": [
+        "assets/fonts/AppSans-Regular.ttf",
+    ],
+    "semibold": [
+        "assets/fonts/AppSans-Bold.ttf",
+    ],
+    "bold": [
+        "assets/fonts/AppSans-Bold.ttf",
+    ],
+}
+FONT_SOURCES_USED = set()
+LAST_RECEIPT_RENDER_MODE = "unknown"
 
 # ------------------ DATA ------------------
 def load_data():
@@ -59,6 +73,13 @@ def load_font(size, weight="regular"):
     """
     weight = (weight or "regular").lower()
     candidates = []
+    base_dir = Path(__file__).parent
+
+    # First priority: bundled repo fonts for consistent rendering everywhere.
+    for font_rel in BUNDLED_FONT_PATHS.get(weight, []) + BUNDLED_FONT_PATHS.get("regular", []):
+        local_font = base_dir / font_rel
+        if local_font.exists():
+            candidates.append(str(local_font))
     if weight in ("bold", "b"):
         candidates = [
             "C:/Windows/Fonts/segoeuib.ttf",
@@ -101,23 +122,37 @@ def load_font(size, weight="regular"):
         ]
     )
 
+    # Pillow bundles DejaVu fonts in many runtimes (including Streamlit cloud),
+    # so probe package-local paths before system paths.
+    pil_fonts_dir = Path(PIL.__file__).resolve().parent / "fonts"
+    if weight in ("bold", "b"):
+        candidates = [str(pil_fonts_dir / "DejaVuSans-Bold.ttf")] + candidates
+    elif weight in ("semibold", "semi", "sb", "600"):
+        candidates = [str(pil_fonts_dir / "DejaVuSans.ttf")] + candidates
+    else:
+        candidates = [str(pil_fonts_dir / "DejaVuSans.ttf")] + candidates
+
     # Try loading each candidate directly first. This works for font family names
     # and for paths that exist in cloud runtimes where absolute locations differ.
     for font_ref in candidates:
         try:
-            return ImageFont.truetype(font_ref, size)
+            font = ImageFont.truetype(font_ref, size)
+            FONT_SOURCES_USED.add(str(font_ref))
+            return font
         except Exception:
             continue
 
     # Last attempt: only for local relative files inside project.
-    base_dir = Path(__file__).parent
     for font_ref in candidates:
         try:
             local_path = base_dir / font_ref
             if local_path.exists():
-                return ImageFont.truetype(str(local_path), size)
+                font = ImageFont.truetype(str(local_path), size)
+                FONT_SOURCES_USED.add(str(local_path))
+                return font
         except Exception:
             continue
+    FONT_SOURCES_USED.add("PIL_DEFAULT_FONT")
     return ImageFont.load_default()
 
 
@@ -382,6 +417,14 @@ def generate_receipt_from_template(txn):
 
 
 def generate_receipt(txn):
+    global LAST_RECEIPT_RENDER_MODE
+    # Prefer exact template look when an asset is available; otherwise render
+    # with the fallback vector layout.
+    template_render = generate_receipt_from_template(txn)
+    if template_render is not None:
+        LAST_RECEIPT_RENDER_MODE = "template"
+        return template_render
+    LAST_RECEIPT_RENDER_MODE = "fallback"
     return generate_receipt_fallback(txn)
 
 
@@ -536,6 +579,14 @@ else:
                 mime="application/pdf",
                 use_container_width=True,
             )
+
+            if st.checkbox("Show render diagnostics", value=False):
+                template_path = find_reference_template()
+                st.caption(
+                    f"Renderer: {LAST_RECEIPT_RENDER_MODE} | "
+                    f"Template: {str(template_path) if template_path else 'not found'} | "
+                    f"Fonts: {', '.join(sorted(FONT_SOURCES_USED)) if FONT_SOURCES_USED else 'none'}"
+                )
 
     # ---------------- HISTORY ----------------
     st.subheader("Transaction History")
