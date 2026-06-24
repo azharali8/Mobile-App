@@ -1,6 +1,7 @@
 import streamlit as st
 import json, random
 from datetime import datetime
+import pytz
 from io import BytesIO
 from PIL import Image, ImageDraw, ImageFont
 from pathlib import Path
@@ -557,7 +558,7 @@ else:
                 "sender_phone": (st.session_state.data["users"][user].get("phone") or "").strip(),
                 "amount": amount,
                 "fee": 0.0,
-                "date": datetime.now().strftime("%d-%b-%Y %I:%M %p")
+                "date": datetime.now(pytz.timezone("Asia/Karachi")).strftime("%d-%b-%Y %I:%M %p")
             }
 
             # Deduct balance
