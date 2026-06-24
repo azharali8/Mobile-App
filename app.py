@@ -1,13 +1,14 @@
 import streamlit as st
 import json, random
 from datetime import datetime
-import pytz
+from zoneinfo import ZoneInfo
 from io import BytesIO
 from PIL import Image, ImageDraw, ImageFont
 from pathlib import Path
 
 FILE = "data.json"
-APP_BUILD = "receipt-font-fix-2026-05-06-1552"
+APP_BUILD = "receipt-timezone-fix-2026-06-25-0005"
+RECEIPT_TIMEZONE = ZoneInfo("Asia/Karachi")
 REFERENCE_TEMPLATE_PATHS = [
     "assets/receipt_template.png",
     "receipt_template.png",
@@ -84,6 +85,10 @@ def format_reference_datetime(date_str):
         except Exception:
             continue
     return date_str
+
+
+def current_receipt_datetime():
+    return datetime.now(RECEIPT_TIMEZONE).strftime("%d-%b-%Y %I:%M %p")
 
 
 def fit_text(draw, text, font, max_width):
@@ -558,7 +563,7 @@ else:
                 "sender_phone": (st.session_state.data["users"][user].get("phone") or "").strip(),
                 "amount": amount,
                 "fee": 0.0,
-                "date": datetime.now(pytz.timezone("Asia/Karachi")).strftime("%d-%b-%Y %I:%M %p")
+                "date": current_receipt_datetime()
             }
 
             # Deduct balance
