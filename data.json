@@ -2,7 +2,7 @@
     "users": {
         "03080018225": {
             "Name": "Azhar Ali",
-            "balance": 8500,
+            "balance": 4500,
             "pin": "1234",
             "name": "Azhar Ali",
             "phone": "03080018225"
@@ -26,6 +26,11 @@
             "balance": 7500,
             "name": "Muhammad Anees",
             "phone": "03107201231"
+        },
+        "03127169498": {
+            "balance": 10000,
+            "name": "Haider",
+            "phone": "03127169498"
         }
     },
     "transactions": [
@@ -346,6 +351,178 @@
             "amount": 500,
             "fee": 0.0,
             "date": "06-May-2026 03:54 PM"
+        },
+        {
+            "id": "5703914321",
+            "sender": "03080018225",
+            "receiver": "Muhammad Anees",
+            "receiver_name": "Muhammad Anees",
+            "receiver_phone": "",
+            "account_name": "Muhammad Anees",
+            "sender_name": "Azhar Ali",
+            "sender_phone": "03080018225",
+            "amount": 500,
+            "fee": 0.0,
+            "date": "30-Jun-2026 01:50 AM"
+        },
+        {
+            "id": "4260132333",
+            "sender": "03080018225",
+            "receiver": "Muhammad Anees",
+            "receiver_name": "Muhammad Anees",
+            "receiver_phone": "",
+            "account_name": "Muhammad Anees",
+            "sender_name": "Azhar Ali",
+            "sender_phone": "03080018225",
+            "amount": 500,
+            "fee": 0.0,
+            "date": "30-Jun-2026 01:53 AM"
+        },
+        {
+            "id": "4843265391",
+            "sender": "03080018225",
+            "receiver": "Muhammad Anees",
+            "receiver_name": "Muhammad Anees",
+            "receiver_phone": "",
+            "account_name": "Muhammad Anees",
+            "sender_name": "Azhar Ali",
+            "sender_phone": "03080018225",
+            "amount": 500,
+            "fee": 0.0,
+            "date": "30-Jun-2026 02:00 AM"
+        },
+        {
+            "id": "3663376589",
+            "sender": "03080018225",
+            "receiver": "Muhammad Anees",
+            "receiver_name": "Muhammad Anees",
+            "receiver_phone": "",
+            "account_name": "Muhammad Anees",
+            "sender_name": "Azhar Ali",
+            "sender_phone": "03080018225",
+            "amount": 500,
+            "fee": 0.0,
+            "date": "30-Jun-2026 02:09 AM"
+        },
+        {
+            "id": "3241070449",
+            "sender": "03080018225",
+            "receiver": "Muhammad Anees",
+            "receiver_name": "Muhammad Anees",
+            "receiver_phone": "",
+            "account_name": "Muhammad Anees",
+            "sender_name": "Azhar Ali",
+            "sender_phone": "03080018225",
+            "amount": 500,
+            "fee": 0.0,
+            "date": "30-Jun-2026 02:11 AM"
+        },
+        {
+            "id": "6564601619",
+            "sender": "03080018225",
+            "receiver": "Muhammad Anees",
+            "receiver_name": "Muhammad Anees",
+            "receiver_phone": "03076450987",
+            "account_name": "Muhammad Anees",
+            "sender_name": "Azhar Ali",
+            "sender_phone": "03080018225",
+            "amount": 500,
+            "fee": 0.0,
+            "date": "30-Jun-2026 02:15 AM"
+        },
+        {
+            "id": "3291331055",
+            "sender": "03080018225",
+            "receiver": "Muhammad Anees",
+            "receiver_name": "Muhammad Anees",
+            "receiver_phone": "03076450987",
+            "account_name": "Muhammad Anees",
+            "sender_name": "Azhar Ali",
+            "sender_phone": "03080018225",
+            "amount": 100,
+            "fee": 0.0,
+            "date": "30-Jun-2026 02:23 AM"
+        },
+        {
+            "id": "9604212764",
+            "sender": "03080018225",
+            "receiver": "Muhammad Anees",
+            "receiver_name": "Muhammad Anees",
+            "receiver_phone": "",
+            "account_name": "Muhammad Anees",
+            "sender_name": "Azhar Ali",
+            "sender_phone": "03080018225",
+            "amount": 100,
+            "fee": 0.0,
+            "date": "30-Jun-2026 03:04 AM"
+        },
+        {
+            "id": "5141308071",
+            "sender": "03080018225",
+            "receiver": "Muhammad Anees",
+            "receiver_name": "Muhammad Anees",
+            "receiver_phone": "03414564045",
+            "account_name": "Muhammad Anees",
+            "sender_name": "Azhar Ali",
+            "sender_phone": "03080018225",
+            "amount": 100,
+            "fee": 0.0,
+            "date": "30-Jun-2026 03:39 AM"
+        },
+        {
+            "id": "8434852129",
+            "sender": "03080018225",
+            "receiver": "Muhammad Anees",
+            "receiver_name": "Muhammad Anees",
+            "receiver_phone": "",
+            "account_name": "Muhammad Anees",
+            "sender_name": "Azhar Ali",
+            "sender_phone": "03080018225",
+            "amount": 100,
+            "fee": 0.0,
+            "date": "30-Jun-2026 04:13 AM"
+        },
+        {
+            "id": "8334839013",
+            "sender": "03080018225",
+            "receiver": "Muhammad Anees",
+            "receiver_name": "Muhammad Anees",
+            "receiver_phone": "",
+            "receiver_bank": "Jazzcash",
+            "account_name": "Muhammad Anees",
+            "sender_name": "Azhar Ali",
+            "sender_phone": "03080018225",
+            "amount": 100,
+            "fee": 0.0,
+            "date": "30-Jun-2026 04:23 AM"
+        },
+        {
+            "id": "3202541932",
+            "sender": "03080018225",
+            "receiver": "Muhammad Anees",
+            "receiver_name": "Muhammad Anees",
+            "receiver_phone": "03080018990",
+            "receiver_bank": "Meezan Bank",
+            "account_name": "Muhammad Anees",
+            "sender_name": "Azhar Ali",
+            "sender_phone": "03080018225",
+            "amount": 100,
+            "fee": 0.0,
+            "date": "30-Jun-2026 04:24 AM"
+        },
+        {
+            "id": "9547433159",
+            "sender": "03080018225",
+            "receiver": "Fazal Mehboob",
+            "receiver_name": "Fazal Mehboob",
+            "receiver_phone": "002*********136",
+            "receiver_bank": "Faysal Bank",
+            "account_name": "Fazal Mehboob",
+            "sender_name": "Azhar Ali",
+            "sender_phone": "03080018225",
+            "amount": 400,
+            "fee": 0.0,
+            "date": "30-Jun-2026 11:19 AM"
         }
     ]
 }
