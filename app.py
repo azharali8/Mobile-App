@@ -59,7 +59,14 @@ def save_data(data):
 
 # ------------------ HELPERS ------------------
 def load_font(size, weight="regular"):
-    # TTF path removed intentionally: always use deterministic Pillow default.
+    base_dir = Path(__file__).parent
+    font_file = "AppSans-Bold.ttf" if weight in ["bold", "semibold"] else "AppSans-Regular.ttf"
+    font_path = base_dir / "assets" / "fonts" / font_file
+    if font_path.exists():
+        try:
+            return ImageFont.truetype(str(font_path), size)
+        except Exception:
+            pass
     try:
         FONT_SOURCES_USED.add(f"PIL_DEFAULT_FONT_SIZE_{size}")
         return ImageFont.load_default(size=size)
@@ -187,28 +194,62 @@ def load_brand_logo(max_width):
 
 
 def generate_receipt_fallback(txn):
-    # High resolution canvas for crisp exports.
-    width, height = 1242, 2208
-    img = Image.new("RGB", (width, height), "#4b475a")
+    width = 1242
+
+    # sections = (title, line1, line2, line3)  — line3 is optional extra value row
+    sections = [
+        ("Funding Source", "easypaisa Account", "", ""),
+        ("Sent to",
+            txn.get("receiver_bank", ""),
+            txn.get("receiver_name", txn.get("receiver", "")),
+            txn.get("receiver_phone", "")),
+        ("Account Details", txn.get("account_name", txn.get("receiver_name", txn.get("receiver", ""))), "", ""),
+        ("Sent by", txn.get("sender_name", txn.get("sender", "")), txn.get("sender_phone", ""), ""),
+        ("Amount", f"{float(txn.get('amount', 0)):.2f}", "", ""),
+        ("Fee / Charge", f"{float(txn.get('fee', 0)):.2f}", "", ""),
+    ]
+
+    card_top = 160  # Upper dark space
+    
+    # Restore original exact header spacing for perfect layout
+    divider_y = card_top + 560
+    y_start = divider_y + 210
+
+    line_step = 66
+    section_gap = 33
+    
+    # Precise pre-calculation using the same logic as drawing
+    curr_y = y_start
+    for _, line1, line2, line3 in sections:
+        curr_y += line_step
+        if line1: curr_y += line_step
+        if line2: curr_y += line_step
+        if line3: curr_y += line_step
+        curr_y += section_gap
+
+    total_y = curr_y + 20
+    base_y = total_y + 76
+    
+    footer_icons_y = base_y + 160
+    card_bottom = footer_icons_y + 100
+    height = card_bottom + 180
+
+    bg_color = "#4b475a"
+    img = Image.new("RGB", (width, height), bg_color)
     draw = ImageDraw.Draw(img)
 
-    # Main receipt card
     card_margin = 20
     card_left = card_margin
-    card_top = 36
     card_right = width - card_margin
-    card_bottom = height - 36
-    draw.rounded_rectangle(
+    
+    draw.rectangle(
         [(card_left, card_top), (card_right, card_bottom)],
-        radius=12,
         fill="white",
     )
 
     content_left = card_left + 90
     content_right = card_right - 90
 
-    # Fonts
-    # Typography tuned to match the original receipt (Segoe UI look).
     brand_font = load_font(74, weight="bold")
     title_font = load_font(89, weight="bold")
     subtitle_font = load_font(40, weight="regular")
@@ -219,21 +260,18 @@ def generate_receipt_fallback(txn):
     rs_font = load_font(53, weight="semibold")
     amount_font = load_font(64, weight="bold")
     meta_font = load_font(40, weight="regular")
+    icon_font = load_font(36, weight="regular")
 
-    # Close icon
     draw.text((card_right - 68, card_top + 28), "x", font=meta_font, fill="#4c4c4c")
 
-    # Check icon
     cx = width // 2
     cy = card_top + 120
     radius = 58
     draw.ellipse([(cx - radius, cy - radius), (cx + radius, cy + radius)], fill="#12b65c")
-    # Draw vector check mark for consistent rendering on every machine.
     check_color = "white"
     draw.line([(cx - 22, cy + 2), (cx - 6, cy + 18)], fill=check_color, width=10)
     draw.line([(cx - 6, cy + 18), (cx + 24, cy - 16)], fill=check_color, width=10)
 
-    # Header brand logo (image if available, text fallback).
     brand_logo = load_brand_logo(max_width=430)
     brand_top = card_top + 212
     if brand_logo is not None:
@@ -244,55 +282,45 @@ def generate_receipt_fallback(txn):
     draw_centered_text(draw, "Transaction Successful", card_top + 336, title_font, "#10b35f", width)
     draw_centered_text(draw, "You have sent money.", card_top + 454, subtitle_font, "#6a6a6a", width)
 
-    divider_y = card_top + 560
+    # Draw divider to match the perfect template
     draw.line([(card_left + 1, divider_y), (card_right - 1, divider_y)], fill="#e7e7e7", width=3)
 
-    # Meta
     date_text = format_reference_datetime(txn.get("date", ""))
     draw.text((content_left, divider_y + 44), date_text, font=meta_font, fill="#686868")
     draw.text((content_left, divider_y + 104), f"ID#{txn['id']}", font=meta_font, fill="#686868")
 
-    y = divider_y + 210
+    y = y_start
     max_text_width = content_right - content_left
-    details_end_limit = card_bottom - 260
-
-    sections = [
-        ("Funding Source", "easypaisa Account", ""),
-        ("Sent to", txn.get("receiver_name", txn.get("receiver", "")), txn.get("receiver_phone", "")),
-        ("Account Details", txn.get("account_name", txn.get("receiver_name", txn.get("receiver", ""))), ""),
-        ("Sent by", txn.get("sender_name", txn.get("sender", "")), txn.get("sender_phone", "")),
-        ("Amount", f"{float(txn.get('amount', 0)):.2f}", ""),
-        ("Fee / Charge", f"{float(txn.get('fee', 0)):.2f}", ""),
-    ]
-
-    # Adaptive spacing prevents any overlap with footer/total area.
-    section_count = len(sections)
-    lines_count = sum(1 + (1 if line1 else 0) + (1 if line2 else 0) for _, line1, line2 in sections)
-    available_h = max(300, details_end_limit - y)
-    line_step = max(48, min(66, available_h // (lines_count + section_count)))
-    section_gap = max(16, min(34, line_step // 2))
-
     emphasized_labels = {"Funding Source", "Sent by", "Account Details", "Amount", "Fee / Charge"}
 
-    def section(title, line1=None, line2=None):
+    def section(title, line1=None, line2=None, line3=None):
         nonlocal y
         label_font = section_label_font_plus if title in emphasized_labels else section_label_font
         draw.text((content_left, y), fit_text(draw, title, label_font, max_text_width), font=label_font, fill="#4b4b4b")
         y += line_step
         if line1:
-            draw.text((content_left, y), fit_text(draw, line1, field_value_font, max_text_width), font=field_value_font, fill="#5b5b5b")
+            if title == "Funding Source":
+                icon_w, icon_h = 36, 26
+                iy = y + 12
+                draw.rounded_rectangle([(content_left, iy), (content_left + icon_w, iy + icon_h)], outline="#5b5b5b", width=3, radius=4)
+                draw.line([(content_left + 6, iy + 6), (content_left + 16, iy + 6)], fill="#5b5b5b", width=3)
+                draw.text((content_left + icon_w + 12, y), fit_text(draw, line1, field_value_font, max_text_width - icon_w - 12), font=field_value_font, fill="#5b5b5b")
+            else:
+                draw.text((content_left, y), fit_text(draw, line1, field_value_font, max_text_width), font=field_value_font, fill="#5b5b5b")
             y += line_step
         if line2:
             draw.text((content_left, y), fit_text(draw, line2, field_value_font, max_text_width), font=field_value_font, fill="#5b5b5b")
             y += line_step
+        if line3:
+            draw.text((content_left, y), fit_text(draw, line3, field_value_font, max_text_width), font=field_value_font, fill="#5b5b5b")
+            y += line_step
         y += section_gap
 
-    for title, line1, line2 in sections:
-        section(title, line1, line2)
+    for title, line1, line2, line3 in sections:
+        section(title, line1, line2, line3)
 
-    total_y = min(y, card_bottom - 220)
+    total_y = y + 20
     draw.text((content_left, total_y), "Total Amount", font=amount_label_font, fill="#23a867")
-    # Match original: smaller "Rs." + bolder numeric amount.
     total_amount = float(txn.get("amount", 0))
     rs_text = "Rs."
     amt_text = f"{total_amount:.2f}"
@@ -300,6 +328,51 @@ def generate_receipt_fallback(txn):
     draw.text((content_left, base_y), rs_text, font=rs_font, fill="#474747")
     rs_w = draw.textbbox((0, 0), rs_text, font=rs_font)[2]
     draw.text((content_left + rs_w + 18, base_y - 2), amt_text, font=amount_font, fill="#474747")
+
+    # Footer Icons with vector drawing, aligned to the right
+    def draw_footer_icon(kind, cx, cy):
+        text_map = {'share': "Share", 'gallery': "Save to Gallery", 'pdf': "Save as PDF"}
+        text = text_map[kind]
+        bbox = draw.textbbox((0, 0), text, font=icon_font)
+        tw = bbox[2] - bbox[0]
+        draw.text((cx - tw//2, cy), text, font=icon_font, fill="#a0a0a0")
+        
+        ix = cx
+        iy = cy - 36
+        color = "#a0a0a0"
+        
+        if kind == 'share':
+            draw.line([(ix-10, iy), (ix+6, iy-8)], fill=color, width=3)
+            draw.line([(ix-10, iy), (ix+6, iy+8)], fill=color, width=3)
+            draw.ellipse([(ix-14, iy-4), (ix-6, iy+4)], fill="white", outline=color, width=3)
+            draw.ellipse([(ix+2, iy-12), (ix+10, iy-4)], fill="white", outline=color, width=3)
+            draw.ellipse([(ix+2, iy+4), (ix+10, iy+12)], fill="white", outline=color, width=3)
+        elif kind == 'gallery':
+            draw.rounded_rectangle([(ix-18, iy-14), (ix+18, iy+14)], outline=color, width=3, radius=4)
+            draw.line([(ix-12, iy+12), (ix-4, iy-2), (ix+4, iy+12)], fill=color, width=3)
+            draw.line([(ix-2, iy+12), (ix+6, iy-6), (ix+14, iy+12)], fill=color, width=3)
+            draw.ellipse([(ix-10, iy-10), (ix-6, iy-6)], fill=color)
+        elif kind == 'pdf':
+            draw.rounded_rectangle([(ix-14, iy-18), (ix+14, iy+18)], outline=color, width=3, radius=4)
+            draw.line([(ix+6, iy-18), (ix+14, iy-10)], fill=color, width=3)
+            draw.line([(ix-6, iy-6), (ix+6, iy-6)], fill=color, width=3)
+            draw.line([(ix-6, iy), (ix+6, iy)], fill=color, width=3)
+            draw.line([(ix-6, iy+6), (ix, iy+6)], fill=color, width=3)
+
+    c3 = content_right - 80
+    c2 = c3 - 270
+    c1 = c2 - 250
+    
+    draw_footer_icon('share', c1, footer_icons_y)
+    draw_footer_icon('gallery', c2, footer_icons_y)
+    draw_footer_icon('pdf', c3, footer_icons_y)
+    
+    # Perforated edges
+    perf_radius = 10
+    perf_spacing = 30
+    for px in range(card_left + 15, card_right, perf_spacing):
+        draw.ellipse([(px - perf_radius, card_top - perf_radius), (px + perf_radius, card_top + perf_radius)], fill=bg_color)
+        draw.ellipse([(px - perf_radius, card_bottom - perf_radius), (px + perf_radius, card_bottom + perf_radius)], fill=bg_color)
 
     return img
 
@@ -439,12 +512,6 @@ def generate_receipt_zero_risk(txn):
 
 def generate_receipt(txn):
     global LAST_RECEIPT_RENDER_MODE
-    # Zero-risk mode: use bitmap-scaled text engine so output stays structured
-    # even if runtime cannot load any TrueType fonts.
-    img = generate_receipt_zero_risk(txn)
-    if img is not None:
-        LAST_RECEIPT_RENDER_MODE = "zero-risk-bitmap"
-        return img
     LAST_RECEIPT_RENDER_MODE = "fallback"
     return generate_receipt_fallback(txn)
 
@@ -461,7 +528,6 @@ if "pending_user_key" not in st.session_state:
 
 # ------------------ UI ------------------
 st.set_page_config(page_title="Easypaisa", layout="wide")
-st.caption(f"Build: {APP_BUILD}")
 
 st.markdown("""
 <style>
@@ -481,12 +547,240 @@ st.markdown("""
 
 # ------------------ LOGIN ------------------
 if not st.session_state.user:
-    st.title("🔐 Login")
+    st.markdown("""
+        <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
+        
+        /* Hide main menu and header */
+        #MainMenu {visibility: hidden;}
+        header {visibility: hidden;}
+        footer {visibility: hidden;}
+        div[data-testid="stDecoration"] {display: none;}
+        
+        /* Allow responsive vertical scrolling while keeping background static */
+        html, body, [data-testid="stAppViewContainer"], .stApp {
+            overflow-x: hidden !important;
+            overflow-y: auto !important;
+            min-height: 100vh !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+        [data-testid="stAppViewContainer"] {
+            overflow-x: hidden !important;
+            overflow-y: auto !important;
+        }
+        [data-testid="stMainBlockContainer"] {
+            overflow-x: hidden !important;
+            overflow-y: auto !important;
+        }
+        /* Hide scrollbars */
+        ::-webkit-scrollbar {
+            display: none !important;
+        }
+        
+        /* Premium light green to pale yellow mesh gradient background */
+        .stApp {
+            background: linear-gradient(135deg, #9deecb 0%, #dbf5d7 50%, #fdf7bc 100%) !important;
+            font-family: 'Poppins', sans-serif !important;
+        }
+        
+        /* Transparent outer wrapper container - Centered with max-width of 500px */
+        .main .block-container:has(.login-title),
+        [data-testid="stAppViewBlockContainer"]:has(.login-title) {
+            max-width: 500px !important;
+            margin: 0 auto !important;
+            margin-top: 6vh !important;
+            padding: 20px !important;
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            z-index: 10 !important;
+            width: 100% !important;
+        }
+
+        /* Bank Logo */
+        .illustration-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 20px;
+            margin-top: -10px;
+        }
+        .illustration-glow {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(135deg, #b8f5dc 0%, #e8faf0 60%, #fdf7bc 100%) !important;
+            border-radius: 50% !important;
+            border: 2px solid rgba(11, 163, 118, 0.25) !important;
+            box-shadow: 0 8px 28px rgba(11, 163, 118, 0.18), 0 2px 8px rgba(0,0,0,0.06) !important;
+            overflow: hidden !important;
+        }
+        .bank-logo-img {
+            width: 80px;
+            height: 80px;
+            object-fit: contain;
+            mix-blend-mode: multiply;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.08));
+        }
+
+        /* Titles */
+        .login-title {
+            text-align: center;
+            font-size: 38px;
+            font-weight: 800;
+            margin-bottom: 6px;
+            color: #000000 !important;
+            font-family: 'Poppins', sans-serif !important;
+        }
+        
+        .login-subtitle {
+            text-align: center;
+            font-size: 16px;
+            color: #4a5568 !important;
+            margin-bottom: 30px;
+            font-weight: 500;
+            font-family: 'Poppins', sans-serif !important;
+        }
+
+        /* Centered login form wrapper - max-width 500px */
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.stTextInput),
+        div[data-testid="stVerticalBlock"]:has(.stTextInput) {
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            padding: 0 !important;
+            margin-top: 15px !important;
+            color: #000000 !important;
+            max-width: 500px !important;
+            margin-left: auto !important;
+            margin-right: auto !important;
+            width: 100% !important;
+        }
+        
+        /* Customize vertical gaps */
+        div[data-testid="stVerticalBlockBorderWrapper"] > div {
+            gap: 16px !important;
+        }
+
+        /* Inputs label */
+        div[data-testid="stTextInput"] label {
+            color: #000000 !important;
+            font-weight: 700 !important;
+            font-size: 15px !important;
+            margin-bottom: 8px;
+            font-family: 'Poppins', sans-serif !important;
+        }
+        div[data-testid="stTextInput"] div[data-baseweb="input"] {
+            background-color: #ffffff !important;
+            border: 1px solid #cbece0 !important;
+            border-radius: 16px !important;
+            transition: all 0.3s ease !important;
+            position: relative !important;
+            padding-left: 16px !important;
+            height: 56px !important;
+        }
+        div[data-testid="stTextInput"] div[data-baseweb="input"]:focus-within {
+            border-color: #0ba376 !important;
+            box-shadow: 0 0 0 3px rgba(11, 163, 118, 0.12) !important;
+            background-color: #ffffff !important;
+        }
+        div[data-testid="stTextInput"] input {
+            color: #000000 !important;
+            font-size: 15px !important;
+            font-family: 'Poppins', sans-serif !important;
+            background: transparent !important;
+            border: none !important;
+            padding: 14px 14px 14px 0 !important;
+        }
+        div[data-testid="stTextInput"] input::placeholder {
+            color: #8c9ba5 !important;
+            opacity: 1 !important;
+        }
+        div[data-testid="stTextInput"] input:-webkit-autofill,
+        div[data-testid="stTextInput"] input:-webkit-autofill:hover, 
+        div[data-testid="stTextInput"] input:-webkit-autofill:focus, 
+        div[data-testid="stTextInput"] input:-webkit-autofill:active {
+            -webkit-box-shadow: 0 0 0 30px white inset !important;
+            -webkit-text-fill-color: #000000 !important;
+        }
+
+        /* Button styling matching the solid green button */
+        div[data-testid="stButton"] {
+            margin-top: 20px;
+        }
+        div[data-testid="stButton"] button[kind="primary"] {
+            background: #0ba376 !important;
+            color: #ffffff !important;
+            border-radius: 24px !important;
+            width: 100% !important;
+            height: 56px !important;
+            border: none !important;
+            font-weight: 700 !important;
+            font-size: 16px !important;
+            transition: all 0.3s ease !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            font-family: 'Poppins', sans-serif !important;
+            box-shadow: none !important;
+        }
+        div[data-testid="stButton"] button[kind="primary"]:hover {
+            background: #098f66 !important;
+            transform: translateY(-1px) !important;
+        }
+        div[data-testid="stButton"] button[kind="primary"]:focus {
+            box-shadow: none !important;
+        }
+        
+        div[data-testid="stButton"] button[kind="secondary"] {
+            background: transparent !important;
+            color: #4a5568 !important;
+            border: 1px solid #cbece0 !important;
+            border-radius: 24px !important;
+            height: 50px !important;
+            width: 100% !important;
+            font-weight: 600 !important;
+            font-family: 'Poppins', sans-serif !important;
+            margin-top: 10px;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+
+    # --- Bank logo: user-provided image, base64 encoded ---
+    import base64 as _b64, os as _os
+    _logo_path = _os.path.join(_os.path.dirname(__file__), "assets", "bank_logo.jpg")
+    if _os.path.exists(_logo_path):
+        with open(_logo_path, "rb") as _f:
+            _logo_b64 = _b64.b64encode(_f.read()).decode()
+        _mime = "image/jpeg"
+    else:
+        _logo_b64 = ""
+        _mime = ""
+    _img_tag = f'<img src="data:{_mime};base64,{_logo_b64}" class="bank-logo-img" alt="Bank Logo" />' if _logo_b64 else "🏦"
+    st.markdown(f"""
+        <div class="illustration-container">
+            <div class="illustration-glow">
+                {_img_tag}
+            </div>
+        </div>
+        <div class="login-title">Digital Bank</div>
+        <div class="login-subtitle">Securely access your account</div>
+    """, unsafe_allow_html=True)
     
-    login_input = st.text_input("Enter Mobile Number (recommended) or Name")
-    pending_name = st.text_input("Your Name (only required first time)", disabled=st.session_state.pending_user_key is None and (not login_input.strip().startswith("03")))
-    
-    if st.button("Login"):
+    card = st.container(border=True)
+    with card:
+        login_input = st.text_input("Mobile Number", placeholder="Enter mobile number")
+        pending_name = st.text_input("Name (for new users)", placeholder="Your full name", disabled=st.session_state.pending_user_key is None and (not login_input.strip().startswith("03")))
+        sign_in_clicked = st.button("Sign In", type="primary")
+        
+        cancel_clicked = False
+        if st.session_state.pending_user_key is not None:
+            cancel_clicked = st.button("Cancel Registration", key="cancel_reg")
+            
+    if sign_in_clicked:
         input_val = login_input.strip()
         
         if input_val:
@@ -500,7 +794,7 @@ if not st.session_state.user:
                     entered = pending_name.strip()
                     if not entered:
                         st.session_state.pending_user_key = user_key
-                        st.error("Please enter your name (first time only).")
+                        st.error("Please enter your password/name (first time only).")
                         st.stop()
                     st.session_state.data["users"][user_key] = {
                         **existing,
@@ -525,8 +819,14 @@ if not st.session_state.user:
             st.session_state.user = user_key
             st.session_state.pending_user_key = None
             st.rerun()
+
+    if st.session_state.pending_user_key is not None:
+        if cancel_clicked:
+            st.session_state.pending_user_key = None
+            st.rerun()
         else:
-            st.error("Enter mobile number or name")    
+            st.error("Enter mobile number or name")
+
 
 # ------------------ DASHBOARD ------------------
 else:
@@ -544,6 +844,7 @@ else:
     st.subheader("Send Money")
     receiver = st.text_input("Receiver Name")
     receiver_phone = st.text_input("Receiver Phone (optional)")
+    receiver_bank = st.text_input("Bank Name (optional)", placeholder="e.g. HBL, Meezan, UBL")
     amount = st.number_input("Amount", min_value=1)
 
     if st.button("Send Money"):
@@ -558,6 +859,7 @@ else:
                 "receiver": receiver,
                 "receiver_name": receiver,
                 "receiver_phone": receiver_phone.strip(),
+                "receiver_bank": receiver_bank.strip(),
                 "account_name": receiver,
                 "sender_name": (st.session_state.data["users"][user].get("name") or "").strip() or str(user),
                 "sender_phone": (st.session_state.data["users"][user].get("phone") or "").strip(),
