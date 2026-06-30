@@ -2,28 +2,28 @@
     "users": {
         "03080018225": {
             "Name": "Azhar Ali",
-            "balance": 4500,
+            "balance": 10000,
             "pin": "1234",
             "name": "Azhar Ali",
             "phone": "03080018225"
         },
         "Azhar Ali": {
-            "balance": 9500,
+            "balance": 10000,
             "name": "Azhar Ali",
             "phone": ""
         },
         "azhar ali": {
-            "balance": 9000,
+            "balance": 10000,
             "name": "Azhar Ali",
             "phone": ""
         },
         "AZHAR ALI": {
-            "balance": 7500,
+            "balance": 10000,
             "name": "Azhar Ali",
             "phone": ""
         },
         "03107201231": {
-            "balance": 7500,
+            "balance": 10000,
             "name": "Muhammad Anees",
             "phone": "03107201231"
         },
