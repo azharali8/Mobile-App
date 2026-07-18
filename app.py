@@ -235,8 +235,8 @@ def generate_receipt_fallback(txn):
     total_y = curr_y + 14
     base_y = total_y + 66
     
-    card_bottom = base_y + 300
-    height = 2400
+    card_bottom = base_y + 450
+    height = 2600
 
     bg_color = "#4b475a"
     img = Image.new("RGB", (width, height), bg_color)
