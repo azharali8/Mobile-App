@@ -2,7 +2,7 @@
     "users": {
         "03080018225": {
             "Name": "Azhar Ali",
-            "balance": 6000,
+            "balance": 5500,
             "pin": "1234",
             "name": "Azhar Ali",
             "phone": "03080018225"
@@ -635,6 +635,20 @@
             "amount": 500,
             "fee": 0.0,
             "date": "18-Jul-2026 11:59 PM"
+        },
+        {
+            "id": "8628628346",
+            "sender": "03080018225",
+            "receiver": "Muhammad Anees",
+            "receiver_name": "Muhammad Anees",
+            "receiver_phone": "03090081822",
+            "receiver_bank": "",
+            "account_name": "Muhammad Anees",
+            "sender_name": "Azhar Ali",
+            "sender_phone": "03080018225",
+            "amount": 500,
+            "fee": 0.0,
+            "date": "19-Jul-2026 12:12 AM"
         }
     ]
 }
