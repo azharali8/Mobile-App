@@ -198,25 +198,23 @@ def generate_receipt_fallback(txn):
 
     # sections = (title, line1, line2, line3)  — line3 is optional extra value row
     sections = [
-        ("Funding Source", "easypaisa Account", "", ""),
         ("Sent to",
-            txn.get("receiver_bank", ""),
             txn.get("receiver_name", txn.get("receiver", "")),
-            txn.get("receiver_phone", "")),
-        ("Account Details", txn.get("account_name", txn.get("receiver_name", txn.get("receiver", ""))), "", ""),
+            txn.get("receiver_phone", ""),
+            ""),
         ("Sent by", txn.get("sender_name", txn.get("sender", "")), txn.get("sender_phone", ""), ""),
         ("Amount", f"{float(txn.get('amount', 0)):.2f}", "", ""),
         ("Fee / Charge", f"{float(txn.get('fee', 0)):.2f}", "", ""),
     ]
 
-    card_top = 160  # Upper dark space
+    card_top = 120  # Upper dark space
     
-    # Restore original exact header spacing for perfect layout
-    divider_y = card_top + 560
-    y_start = divider_y + 210
+    # Tighter header spacing for compact layout
+    divider_y = card_top + 460
+    y_start = divider_y + 170
 
-    line_step = 66
-    section_gap = 33
+    line_step = 60
+    section_gap = 26
     
     # Precise pre-calculation using the same logic as drawing
     curr_y = y_start
@@ -227,12 +225,12 @@ def generate_receipt_fallback(txn):
         if line3: curr_y += line_step
         curr_y += section_gap
 
-    total_y = curr_y + 20
-    base_y = total_y + 76
+    total_y = curr_y + 14
+    base_y = total_y + 66
     
-    footer_icons_y = base_y + 160
-    card_bottom = footer_icons_y + 100
-    height = card_bottom + 180
+    footer_icons_y = base_y + 120
+    card_bottom = footer_icons_y + 80
+    height = card_bottom + 120
 
     bg_color = "#4b475a"
     img = Image.new("RGB", (width, height), bg_color)
@@ -265,22 +263,22 @@ def generate_receipt_fallback(txn):
     draw.text((card_right - 68, card_top + 28), "x", font=meta_font, fill="#4c4c4c")
 
     cx = width // 2
-    cy = card_top + 120
-    radius = 58
+    cy = card_top + 90
+    radius = 50
     draw.ellipse([(cx - radius, cy - radius), (cx + radius, cy + radius)], fill="#12b65c")
     check_color = "white"
     draw.line([(cx - 22, cy + 2), (cx - 6, cy + 18)], fill=check_color, width=10)
     draw.line([(cx - 6, cy + 18), (cx + 24, cy - 16)], fill=check_color, width=10)
 
     brand_logo = load_brand_logo(max_width=430)
-    brand_top = card_top + 212
+    brand_top = card_top + 170
     if brand_logo is not None:
         logo_x = (width - brand_logo.width) // 2
         img.paste(brand_logo, (logo_x, brand_top), brand_logo)
     else:
-        draw_centered_text(draw, "easypaisa", card_top + 224, brand_font, "#2f2f43", width)
-    draw_centered_text(draw, "Transaction Successful", card_top + 336, title_font, "#10b35f", width)
-    draw_centered_text(draw, "You have sent money.", card_top + 454, subtitle_font, "#6a6a6a", width)
+        draw_centered_text(draw, "easypaisa", card_top + 180, brand_font, "#2f2f43", width)
+    draw_centered_text(draw, "Transaction Successful", card_top + 276, title_font, "#10b35f", width)
+    draw_centered_text(draw, "You have sent money.", card_top + 378, subtitle_font, "#6a6a6a", width)
 
     # Draw divider to match the perfect template
     draw.line([(card_left + 1, divider_y), (card_right - 1, divider_y)], fill="#e7e7e7", width=3)
@@ -291,7 +289,7 @@ def generate_receipt_fallback(txn):
 
     y = y_start
     max_text_width = content_right - content_left
-    emphasized_labels = {"Funding Source", "Sent by", "Account Details", "Amount", "Fee / Charge"}
+    emphasized_labels = {"Sent by", "Amount", "Fee / Charge"}
 
     def section(title, line1=None, line2=None, line3=None):
         nonlocal y
@@ -299,14 +297,7 @@ def generate_receipt_fallback(txn):
         draw.text((content_left, y), fit_text(draw, title, label_font, max_text_width), font=label_font, fill="#4b4b4b")
         y += line_step
         if line1:
-            if title == "Funding Source":
-                icon_w, icon_h = 36, 26
-                iy = y + 12
-                draw.rounded_rectangle([(content_left, iy), (content_left + icon_w, iy + icon_h)], outline="#5b5b5b", width=3, radius=4)
-                draw.line([(content_left + 6, iy + 6), (content_left + 16, iy + 6)], fill="#5b5b5b", width=3)
-                draw.text((content_left + icon_w + 12, y), fit_text(draw, line1, field_value_font, max_text_width - icon_w - 12), font=field_value_font, fill="#5b5b5b")
-            else:
-                draw.text((content_left, y), fit_text(draw, line1, field_value_font, max_text_width), font=field_value_font, fill="#5b5b5b")
+            draw.text((content_left, y), fit_text(draw, line1, field_value_font, max_text_width), font=field_value_font, fill="#5b5b5b")
             y += line_step
         if line2:
             draw.text((content_left, y), fit_text(draw, line2, field_value_font, max_text_width), font=field_value_font, fill="#5b5b5b")
@@ -417,30 +408,25 @@ def generate_receipt_from_template(txn):
 
     receiver_name = fit_text(draw, txn.get("receiver_name", txn.get("receiver", "")), value_font, sx(280))
     receiver_phone = fit_text(draw, txn.get("receiver_phone", ""), value_font, sx(280))
-    account_name = fit_text(draw, txn.get("account_name", receiver_name), value_font, sx(280))
     sender_name = fit_text(draw, txn.get("sender_name", txn.get("sender", "")), value_font, sx(280))
     sender_phone = fit_text(draw, txn.get("sender_phone", ""), value_font, sx(280))
     amount = float(txn.get("amount", 0))
     fee = float(txn.get("fee", 0))
 
-    draw.text((left, sy(392)), "Funding Source", font=label_font, fill=label_color)
-    draw.text((sx(73), sy(426)), "easypaisa Account", font=value_font, fill=value_color)
-    draw.text((left, sy(478)), "Sent to", font=label_font, fill=label_color)
-    draw.text((left, sy(513)), receiver_name, font=value_font, fill=value_color)
-    draw.text((left, sy(548)), receiver_phone, font=value_font, fill=value_color)
-    draw.text((left, sy(602)), "Account Details", font=label_font, fill=label_color)
-    draw.text((left, sy(636)), account_name, font=value_font, fill=value_color)
-    draw.text((left, sy(690)), "Sent by", font=label_font, fill=label_color)
-    draw.text((left, sy(724)), sender_name, font=value_font, fill=value_color)
-    draw.text((left, sy(758)), sender_phone, font=value_font, fill=value_color)
-    draw.text((left, sy(812)), "Amount", font=label_font, fill=label_color)
-    draw.text((left, sy(846)), f"{amount:.2f}", font=value_font, fill=value_color)
-    draw.text((left, sy(878)), "Fee / Charge", font=label_font, fill=label_color)
-    draw.text((left, sy(912)), f"{fee:.2f}", font=value_font, fill=value_color)
-    draw.text((left, sy(950)), "Total Amount", font=total_label_font, fill=total_green)
+    draw.text((left, sy(392)), "Sent to", font=label_font, fill=label_color)
+    draw.text((left, sy(426)), receiver_name, font=value_font, fill=value_color)
+    draw.text((left, sy(460)), receiver_phone, font=value_font, fill=value_color)
+    draw.text((left, sy(510)), "Sent by", font=label_font, fill=label_color)
+    draw.text((left, sy(544)), sender_name, font=value_font, fill=value_color)
+    draw.text((left, sy(578)), sender_phone, font=value_font, fill=value_color)
+    draw.text((left, sy(628)), "Amount", font=label_font, fill=label_color)
+    draw.text((left, sy(662)), f"{amount:.2f}", font=value_font, fill=value_color)
+    draw.text((left, sy(694)), "Fee / Charge", font=label_font, fill=label_color)
+    draw.text((left, sy(728)), f"{fee:.2f}", font=value_font, fill=value_color)
+    draw.text((left, sy(766)), "Total Amount", font=total_label_font, fill=total_green)
 
     total_x = left
-    total_y = sy(986)
+    total_y = sy(800)
     rs_text = "Rs."
     amt_text = f"{amount:.2f}"
     draw.text((total_x, total_y), rs_text, font=rs_font, fill=total_color)
@@ -482,30 +468,25 @@ def generate_receipt_zero_risk(txn):
     max_text_w = sx(280)
     receiver_name = fit_bitmap_scaled_text(txn.get("receiver_name", txn.get("receiver", "")), sy(16), max_text_w)
     receiver_phone = fit_bitmap_scaled_text(txn.get("receiver_phone", ""), sy(16), max_text_w)
-    account_name = fit_bitmap_scaled_text(txn.get("account_name", receiver_name), sy(16), max_text_w)
     sender_name = fit_bitmap_scaled_text(txn.get("sender_name", txn.get("sender", "")), sy(16), max_text_w)
     sender_phone = fit_bitmap_scaled_text(txn.get("sender_phone", ""), sy(16), max_text_w)
     amount = float(txn.get("amount", 0))
     fee = float(txn.get("fee", 0))
 
-    draw_bitmap_scaled_text(img, "Funding Source", left, sy(392), sy(21), label_color)
-    draw_bitmap_scaled_text(img, "easypaisa Account", sx(73), sy(426), sy(16), value_color)
-    draw_bitmap_scaled_text(img, "Sent to", left, sy(478), sy(21), label_color)
-    draw_bitmap_scaled_text(img, receiver_name, left, sy(513), sy(16), value_color)
-    draw_bitmap_scaled_text(img, receiver_phone, left, sy(548), sy(16), value_color)
-    draw_bitmap_scaled_text(img, "Account Details", left, sy(602), sy(21), label_color)
-    draw_bitmap_scaled_text(img, account_name, left, sy(636), sy(16), value_color)
-    draw_bitmap_scaled_text(img, "Sent by", left, sy(690), sy(21), label_color)
-    draw_bitmap_scaled_text(img, sender_name, left, sy(724), sy(16), value_color)
-    draw_bitmap_scaled_text(img, sender_phone, left, sy(758), sy(16), value_color)
-    draw_bitmap_scaled_text(img, "Amount", left, sy(812), sy(21), label_color)
-    draw_bitmap_scaled_text(img, f"{amount:.2f}", left, sy(846), sy(16), value_color)
-    draw_bitmap_scaled_text(img, "Fee / Charge", left, sy(878), sy(21), label_color)
-    draw_bitmap_scaled_text(img, f"{fee:.2f}", left, sy(912), sy(16), value_color)
-    draw_bitmap_scaled_text(img, "Total Amount", left, sy(950), sy(21), total_green)
+    draw_bitmap_scaled_text(img, "Sent to", left, sy(392), sy(21), label_color)
+    draw_bitmap_scaled_text(img, receiver_name, left, sy(426), sy(16), value_color)
+    draw_bitmap_scaled_text(img, receiver_phone, left, sy(460), sy(16), value_color)
+    draw_bitmap_scaled_text(img, "Sent by", left, sy(510), sy(21), label_color)
+    draw_bitmap_scaled_text(img, sender_name, left, sy(544), sy(16), value_color)
+    draw_bitmap_scaled_text(img, sender_phone, left, sy(578), sy(16), value_color)
+    draw_bitmap_scaled_text(img, "Amount", left, sy(628), sy(21), label_color)
+    draw_bitmap_scaled_text(img, f"{amount:.2f}", left, sy(662), sy(16), value_color)
+    draw_bitmap_scaled_text(img, "Fee / Charge", left, sy(694), sy(21), label_color)
+    draw_bitmap_scaled_text(img, f"{fee:.2f}", left, sy(728), sy(16), value_color)
+    draw_bitmap_scaled_text(img, "Total Amount", left, sy(766), sy(21), total_green)
 
-    rs_w, _ = draw_bitmap_scaled_text(img, "Rs.", left, sy(986), sy(15), total_color)
-    draw_bitmap_scaled_text(img, f"{amount:.2f}", left + rs_w + sx(6), sy(985), sy(18), total_color)
+    rs_w, _ = draw_bitmap_scaled_text(img, "Rs.", left, sy(800), sy(15), total_color)
+    draw_bitmap_scaled_text(img, f"{amount:.2f}", left + rs_w + sx(6), sy(799), sy(18), total_color)
     FONT_SOURCES_USED.add("PIL_BITMAP_SCALED_ENGINE")
     return img
 
