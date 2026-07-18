@@ -88,7 +88,7 @@ def format_reference_datetime(date_str):
     for fmt in known_formats:
         try:
             dt = datetime.strptime(date_str, fmt)
-            return dt.strftime("%d-%b-%Y  %I:%M %p")
+            return dt.strftime("%d %B %Y  %I:%M %p")
         except Exception:
             continue
     return date_str
@@ -192,11 +192,18 @@ def load_brand_logo(max_width):
             pass
     return None
 
+def draw_branded_easypaisa(img, draw, y, brand_font, width):
+    text = "easypaisa"
+    dark = "#2f2f43"
+    text_bb = draw.textbbox((0, 0), text, font=brand_font)
+    text_w = text_bb[2] - text_bb[0]
+    x0 = (width - text_w) // 2
+    draw.text((x0, y), text, font=brand_font, fill=dark)
+
 
 def generate_receipt_fallback(txn):
     width = 1242
 
-    # sections = (title, line1, line2, line3)  — line3 is optional extra value row
     sections = [
         ("Sent to",
             txn.get("receiver_name", txn.get("receiver", "")),
@@ -235,17 +242,24 @@ def generate_receipt_fallback(txn):
     img = Image.new("RGB", (width, height), bg_color)
     draw = ImageDraw.Draw(img)
 
-    card_margin = 20
+    card_margin = 40
     card_left = card_margin
     card_right = width - card_margin
     
+    # White background for whole card
     draw.rectangle(
         [(card_left, card_top), (card_right, card_bottom)],
         fill="white",
     )
+    
+    # Light grey background for the upper section above divider
+    draw.rectangle(
+        [(card_left, card_top), (card_right, divider_y)],
+        fill="#f8f8f8",
+    )
 
-    content_left = card_left + 90
-    content_right = card_right - 90
+    content_left = card_left + 60
+    content_right = card_right - 60
 
     brand_font = load_font(74, weight="bold")
     title_font = load_font(89, weight="bold")
@@ -275,9 +289,9 @@ def generate_receipt_fallback(txn):
         logo_x = (width - brand_logo.width) // 2
         img.paste(brand_logo, (logo_x, brand_top), brand_logo)
     else:
-        draw_centered_text(draw, "easypaisa", card_top + 180, brand_font, "#2f2f43", width)
+        draw_branded_easypaisa(img, draw, card_top + 180, brand_font, width)
     draw_centered_text(draw, "Transaction Successful", card_top + 276, title_font, "#10b35f", width)
-    draw_centered_text(draw, "You have sent money.", card_top + 378, subtitle_font, "#6a6a6a", width)
+    draw_centered_text(draw, "Money has been sent", card_top + 378, subtitle_font, "#6a6a6a", width)
 
     # Draw divider to match the perfect template
     draw.line([(card_left + 1, divider_y), (card_right - 1, divider_y)], fill="#e7e7e7", width=3)
