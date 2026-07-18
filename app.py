@@ -228,9 +228,8 @@ def generate_receipt_fallback(txn):
     total_y = curr_y + 14
     base_y = total_y + 66
     
-    footer_icons_y = base_y + 120
-    card_bottom = footer_icons_y + 80
-    height = card_bottom + 120
+    card_bottom = base_y + 180
+    height = 2400
 
     bg_color = "#4b475a"
     img = Image.new("RGB", (width, height), bg_color)
@@ -320,44 +319,6 @@ def generate_receipt_fallback(txn):
     rs_w = draw.textbbox((0, 0), rs_text, font=rs_font)[2]
     draw.text((content_left + rs_w + 18, base_y - 2), amt_text, font=amount_font, fill="#474747")
 
-    # Footer Icons with vector drawing, aligned to the right
-    def draw_footer_icon(kind, cx, cy):
-        text_map = {'share': "Share", 'gallery': "Save to Gallery", 'pdf': "Save as PDF"}
-        text = text_map[kind]
-        bbox = draw.textbbox((0, 0), text, font=icon_font)
-        tw = bbox[2] - bbox[0]
-        draw.text((cx - tw//2, cy), text, font=icon_font, fill="#a0a0a0")
-        
-        ix = cx
-        iy = cy - 36
-        color = "#a0a0a0"
-        
-        if kind == 'share':
-            draw.line([(ix-10, iy), (ix+6, iy-8)], fill=color, width=3)
-            draw.line([(ix-10, iy), (ix+6, iy+8)], fill=color, width=3)
-            draw.ellipse([(ix-14, iy-4), (ix-6, iy+4)], fill="white", outline=color, width=3)
-            draw.ellipse([(ix+2, iy-12), (ix+10, iy-4)], fill="white", outline=color, width=3)
-            draw.ellipse([(ix+2, iy+4), (ix+10, iy+12)], fill="white", outline=color, width=3)
-        elif kind == 'gallery':
-            draw.rounded_rectangle([(ix-18, iy-14), (ix+18, iy+14)], outline=color, width=3, radius=4)
-            draw.line([(ix-12, iy+12), (ix-4, iy-2), (ix+4, iy+12)], fill=color, width=3)
-            draw.line([(ix-2, iy+12), (ix+6, iy-6), (ix+14, iy+12)], fill=color, width=3)
-            draw.ellipse([(ix-10, iy-10), (ix-6, iy-6)], fill=color)
-        elif kind == 'pdf':
-            draw.rounded_rectangle([(ix-14, iy-18), (ix+14, iy+18)], outline=color, width=3, radius=4)
-            draw.line([(ix+6, iy-18), (ix+14, iy-10)], fill=color, width=3)
-            draw.line([(ix-6, iy-6), (ix+6, iy-6)], fill=color, width=3)
-            draw.line([(ix-6, iy), (ix+6, iy)], fill=color, width=3)
-            draw.line([(ix-6, iy+6), (ix, iy+6)], fill=color, width=3)
-
-    c3 = content_right - 80
-    c2 = c3 - 270
-    c1 = c2 - 250
-    
-    draw_footer_icon('share', c1, footer_icons_y)
-    draw_footer_icon('gallery', c2, footer_icons_y)
-    draw_footer_icon('pdf', c3, footer_icons_y)
-    
     # Perforated edges
     perf_radius = 10
     perf_spacing = 30

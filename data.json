@@ -2,7 +2,7 @@
     "users": {
         "03080018225": {
             "Name": "Azhar Ali",
-            "balance": 8500,
+            "balance": 7500,
             "pin": "1234",
             "name": "Azhar Ali",
             "phone": "03080018225"
@@ -565,6 +565,34 @@
             "amount": 500,
             "fee": 0.0,
             "date": "18-Jul-2026 11:11 PM"
+        },
+        {
+            "id": "1219986631",
+            "sender": "03080018225",
+            "receiver": "Ali Hamza",
+            "receiver_name": "Ali Hamza",
+            "receiver_phone": "",
+            "receiver_bank": "",
+            "account_name": "Ali Hamza",
+            "sender_name": "Azhar Ali",
+            "sender_phone": "03080018225",
+            "amount": 500,
+            "fee": 0.0,
+            "date": "18-Jul-2026 11:21 PM"
+        },
+        {
+            "id": "3388701174",
+            "sender": "03080018225",
+            "receiver": "Ali Hamza",
+            "receiver_name": "Ali Hamza",
+            "receiver_phone": "",
+            "receiver_bank": "",
+            "account_name": "Ali Hamza",
+            "sender_name": "Azhar Ali",
+            "sender_phone": "03080018225",
+            "amount": 500,
+            "fee": 0.0,
+            "date": "18-Jul-2026 11:25 PM"
         }
     ]
 }
