@@ -206,15 +206,15 @@ def generate_receipt_fallback(txn):
 
     sections = [
         ("Sent to",
+            txn.get("receiver_bank", ""),
             txn.get("receiver_name", txn.get("receiver", "")),
-            txn.get("receiver_phone", ""),
-            ""),
+            txn.get("receiver_phone", "")),
         ("Sent by", txn.get("sender_name", txn.get("sender", "")), txn.get("sender_phone", ""), ""),
         ("Amount", f"{float(txn.get('amount', 0)):.2f}", "", ""),
         ("Fee / Charge", f"{float(txn.get('fee', 0)):.2f}", "", ""),
     ]
 
-    card_top = 120  # Upper dark space
+    card_top = 90  # Upper dark space
     
     # Tighter header spacing for compact layout
     divider_y = card_top + 460
